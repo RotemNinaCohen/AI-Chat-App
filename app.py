@@ -77,9 +77,8 @@ if "messages" not in st.session_state:
 # 4. סרגל צידי (Sidebar)
 with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
-    # לוגו המכללה (או אייקון גנרי)
-    st.image("https://iac.ac.il/landingnew/wp-content/uploads/2025/03/Untitled-design.png",
-             width=60)
+    # לוגו המכללה
+    st.image("https://iac.ac.il/landingnew/wp-content/uploads/2025/03/Untitled-design.png", width=60)
     st.title("ניהול שיחה")
 
     # החלפת מצב עבודה
@@ -87,7 +86,7 @@ with st.sidebar:
 
     # תצוגת סטטוס ויזואלית
     status_color = "#9013FE" if is_agent else "#4A90E2"
-    status_name = "סוכן חכם" if is_agent else "צ'אט רגיל"
+    status_name = "סוכן חכם (זוכר הקשר)" if is_agent else "צ'אט רגיל (ללא הקשר)"
 
     st.markdown(f"""
         <div class="status-card" style="border-right-color: {status_color};">
@@ -134,14 +133,22 @@ if user_input := st.chat_input("איך אפשר לעזור היום?"):
             }
 
             if not is_agent:
-                # מצב 0: צ'אט רגיל
+                # מצב 0: צ'אט רגיל - שולחים רק את ההודעה האחרונה
                 url = f"{BASE_URL}/chat/completions"
                 payload = {"messages": [{"role": "user", "content": user_input}]}
             else:
-                # מצב 1: סוכן חכם
+                # מצב 1: סוכן חכם - שרשור כל ההיסטוריה כדי שיזכור
                 url = f"{BASE_URL}/responses"
+
+                conversation_history = "היסטוריית השיחה שלנו עד כה להקשר:\n"
+                for msg in st.session_state.messages[:-1]:
+                    role_name = "משתמש" if msg["role"] == "user" else "סוכן"
+                    conversation_history += f"{role_name}: {msg['content']}\n"
+
+                conversation_history += f"\nעל בסיס ההקשר הזה, ענה על השאלה: {user_input}"
+
                 payload = {
-                    "input": user_input,
+                    "input": conversation_history,
                     "tools": [{"type": "web_search"}],
                     "reasoning": {"effort": "low"}
                 }
@@ -149,19 +156,33 @@ if user_input := st.chat_input("איך אפשר לעזור היום?"):
             response = requests.post(url, headers=headers, json=payload, timeout=45)
             data = response.json()
 
-            # חילוץ התשובה לפי סוג ה-API
+            # חילוץ התשובה
             ai_reply = ""
             if not is_agent:
                 ai_reply = data.get("choices", [{}])[0].get("message", {}).get("content", "")
             else:
-                if isinstance(data, list):
-                    for item in data:
-                        if item.get("type") == "message":
-                            content_list = item.get("content", [])
-                            if content_list:
-                                ai_reply += content_list[0].get("output_text", "") or content_list[0].get("text", "")
+                # פונקציית צייד - שולפת רק את הטקסט הנקי מתוך המבנה המסובך
+                def extract_clean_text(obj):
+                    text = ""
+                    if isinstance(obj, dict):
+                        if obj.get("type") == "message" and "content" in obj:
+                            for c in obj["content"]:
+                                text += c.get("output_text", "") or c.get("text", "")
+                        else:
+                            for v in obj.values():
+                                text += extract_clean_text(v)
+                    elif isinstance(obj, list):
+                        for item in obj:
+                            text += extract_clean_text(item)
+                    return text
 
-            # הסרת האנימציה והצגת הטקסט הסופי
+
+                ai_reply = extract_clean_text(data)
+
+                if not ai_reply and isinstance(data, dict):
+                    ai_reply = data.get("output", "") or data.get("response", "") or str(data)
+
+            # הסרת האנימציה והצגת הטקסט
             thinking_placeholder.empty()
             if ai_reply:
                 st.markdown(ai_reply)
