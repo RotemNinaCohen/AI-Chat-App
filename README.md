@@ -1,2 +1,14 @@
-# JupyterChart
-This directory contains the JavaScript portion of the Altair `JupyterChart`. The `JupyterChart` is based on the [AnyWidget](https://anywidget.dev/) project.
+# 🤖 IAC Smart AI Assistant
+
+ממשק צ'אט חכם ורספונסיבי שפותח כחלק ממטלה בקורס מערכות מידע.
+הפרויקט מדגים עבודה מול ממשקי תכנות יישומים חיצוניים ומימוש יכולות סוכן חכם
+
+## יכולות מרכזיות
+- **מצב צ'אט רגיל (Stateless):** מענה מהיר מבוסס ידע קודם של המודל.
+- **מצב סוכן חכם (Agentic):** שימוש בכלי חיפוש ברשת (Web Search) למתן תשובות עדכניות.
+- **ממשק Streamlit:** עיצוב מודרני, תמיכה בעברית (RTL), ופונט Heebo.
+
+## איך מתפעלים?
+לשימוש בצ'ט רגיל פשוט הקלידו בתיבה.
+לשימוש בסוכן חכם - יש לשנות מצב באמצעות הכפתור מצד ימין.
+בהצלחה!
